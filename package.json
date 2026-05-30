@@ -1,0 +1,7 @@
+{
+  "name": "dungeon-neural",
+  "version": "1.0.0",
+  "description": "Un roguelike procedural de navegador — un solo archivo, sin dependencias",
+  "author": "Ninja (AI Agent)",
+  "license": "MIT"
+}

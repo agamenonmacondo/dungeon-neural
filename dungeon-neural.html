@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dungeon Neural</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  #title-screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: #0a0a0f;
+    z-index: 100;
+    transition: opacity 0.8s;
+  }
+
+  #title-screen.hidden { opacity: 0; pointer-events: none; }
+
+  #title-screen h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 2.4em;
+    color: #00ff88;
+    text-shadow: 0 0 30px #00ff8866, 0 0 60px #00ff8833;
+    margin-bottom: 10px;
+    letter-spacing: 4px;
+  }
+
+  #title-screen .subtitle {
+    color: #888;
+    font-size: 0.85em;
+    margin-bottom: 50px;
+  }
+
+  #title-screen .press-start {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.9em;
+    color: #ffaa00;
+    animation: blink 1.2s infinite;
+  }
+
+  #title-screen .controls-hint {
+    color: #555;
+    font-size: 0.7em;
+    margin-top: 40px;
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  #game-container {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100vh;
+  }
+
+  #game-container.active { display: flex; }
+
+  #hud {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: #111118;
+    border-bottom: 1px solid #222;
+    font-size: 0.8em;
+  }
+
+  .hud-section { display: flex; align-items: center; gap: 16px; }
+
+  .stat { display: flex; align-items: center; gap: 4px; }
+  .stat-label { color: #666; }
+  .stat-value { color: #00ff88; font-weight: 700; }
+  .stat-value.hp { color: #ff4444; }
+  .stat-value.gold { color: #ffaa00; }
+  .stat-value.floor { color: #66aaff; }
+
+  .hp-bar-bg {
+    width: 120px; height: 10px;
+    background: #333; border-radius: 5px;
+    overflow: hidden;
+  }
+  .hp-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444, #ff6666);
+    border-radius: 5px;
+    transition: width 0.3s;
+  }
+
+  #main-area {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 10px;
+    flex: 1;
+    padding: 8px;
+  }
+
+  #canvas-wrapper {
+    position: relative;
+    border: 2px solid #222;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #0d0d14;
+  }
+
+  canvas#game { display: block; }
+
+  #side-panel {
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.75em;
+  }
+
+  .panel-box {
+    background: #111118;
+    border: 1px solid #222;
+    border-radius: 4px;
+    padding: 8px;
+  }
+
+  .panel-box h3 {
+    font-size: 0.85em;
+    color: #00ff88;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #222;
+    padding-bottom: 4px;
+  }
+
+  #minimap-canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #0a0a0f;
+    border-radius: 2px;
+  }
+
+  #inventory-list {
+    list-style: none;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  #inventory-list li {
+    padding: 2px 0;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  #inventory-list li .item-icon { margin-right: 4px; }
+  #inventory-list li .item-name { color: #ccc; }
+  #inventory-list li .item-stat { color: #888; float: right; }
+
+  #message-log {
+    height: 80px;
+    overflow-y: auto;
+    font-size: 0.75em;
+    line-height: 1.5;
+  }
+  #message-log .msg { padding: 1px 0; }
+  .msg-combat { color: #ff6666; }
+  .msg-item { color: #ffaa00; }
+  .msg-info { color: #66aaff; }
+  .msg-level { color: #00ff88; }
+  .msg-story { color: #cc88ff; }
+
+  #controls-bar {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 6px 12px;
+    font-size: 0.7em;
+    color: #444;
+    background: #111118;
+    border-top: 1px solid #222;
+    border-radius: 0 0 4px 4px;
+  }
+
+  .key-hint { display: flex; align-items: center; gap: 4px; }
+  kbd {
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    color: #888;
+  }
+
+  #death-screen, #win-screen {
+    position: fixed; inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+  }
+
+  #death-screen {
+    background: rgba(10,0,0,0.95);
+  }
+  #win-screen {
+    background: rgba(0,10,0,0.95);
+  }
+
+  .death-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 2.5em;
+    color: #ff2222;
+    text-shadow: 0 0 40px #ff000066;
+    margin-bottom: 20px;
+  }
+
+  .win-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 2.5em;
+    color: #00ff88;
+    text-shadow: 0 0 40px #00ff8866;
+    margin-bottom: 20px;
+  }
+
+  .stats-summary {
+    color: #aaa;
+    font-size: 0.9em;
+    text-align: center;
+    line-height: 2;
+    margin-bottom: 30px;
+  }
+
+  .restart-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8em;
+    color: #00ff88;
+    background: none;
+    border: 2px solid #00ff88;
+    padding: 12px 30px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .restart-btn:hover {
+    background: #00ff8822;
+    box-shadow: 0 0 20px #00ff8844;
+  }
+
+  /* Mobile touch controls */
+  #touch-controls {
+    display: none;
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+  }
+
+  @media (max-width: 800px) {
+    #side-panel { display: none; }
+    #controls-bar { display: none; }
+    #touch-controls {
+      display: grid;
+      grid-template-columns: 50px 50px 50px;
+      grid-template-rows: 50px 50px 50px;
+      gap: 4px;
+    }
+    .touch-btn {
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #888;
+      font-size: 1.4em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .touch-btn:active { background: #333; color: #00ff88; }
+    #hud { font-size: 0.7em; }
+  }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    background: #1a1a22;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.75em;
+    color: #ccc;
+    pointer-events: none;
+    z-index: 300;
+    display: none;
+    max-width: 200px;
+  }
+</style>
+</head>
+<body>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen">
+  <h1>DUNGEON NEURAL</h1>
+  <div class="subtitle">Un roguelike procedural</div>
+  <div class="press-start">Presiona ENTER para comenzar</div>
+  <div class="controls-hint">
+    WASD / Flechas: Mover &amp; Atacar<br>
+    E: Recoger item &nbsp; SPACE: Esperar turno<br>
+    1-9: Usar item del inventario<br>
+    M: Minimapa ampliado
+  </div>
+</div>
+
+<!-- DEATH SCREEN -->
+<div id="death-screen">
+  <div class="death-title">HAS MUERTO</div>
+  <div class="stats-summary" id="death-stats"></div>
+  <button class="restart-btn" onclick="startGame()">INTENTAR DE NUEVO</button>
+</div>
+
+<!-- WIN SCREEN -->
+<div id="win-screen">
+  <div class="win-title">VICTORIA</div>
+  <div class="stats-summary" id="win-stats"></div>
+  <button class="restart-btn" onclick="startGame()">JUGAR DE NUEVO</button>
+</div>
+
+<!-- GAME -->
+<div id="game-container">
+  <div id="hud">
+    <div class="hud-section">
+      <div class="stat">
+        <span class="stat-label">HP</span>
+        <div class="hp-bar-bg"><div class="hp-bar" id="hp-bar"></div></div>
+        <span class="stat-value hp" id="hp-text">50/50</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">ATK</span>
+        <span class="stat-value" id="atk-text">5</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">DEF</span>
+        <span class="stat-value" id="def-text">2</span>
+      </div>
+    </div>
+    <div class="hud-section">
+      <div class="stat">
+        <span class="stat-label">Piso</span>
+        <span class="stat-value floor" id="floor-text">1</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Oro</span>
+        <span class="stat-value gold" id="gold-text">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Exp</span>
+        <span class="stat-value" id="exp-text">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="main-area">
+    <div id="canvas-wrapper">
+      <canvas id="game" width="700" height="500"></canvas>
+    </div>
+    <div id="side-panel">
+      <div class="panel-box">
+        <h3>Minimapa</h3>
+        <canvas id="minimap-canvas" width="200" height="200"></canvas>
+      </div>
+      <div class="panel-box">
+        <h3>Inventario</h3>
+        <ul id="inventory-list"></ul>
+      </div>
+      <div class="panel-box">
+        <h3>Mensajes</h3>
+        <div id="message-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls-bar">
+    <div class="key-hint"><kbd>WASD</kbd>/<kbd>↑↓←→</kbd> Mover</div>
+    <div class="key-hint"><kbd>E</kbd> Recoger</div>
+    <div class="key-hint"><kbd>1-9</kbd> Usar item</div>
+    <div class="key-hint"><kbd>SPACE</kbd> Esperar</div>
+    <div class="key-hint"><kbd>M</kbd> Minimapa</div>
+  </div>
+</div>
+
+<!-- MOBILE TOUCH -->
+<div id="touch-controls">
+  <div></div>
+  <div class="touch-btn" data-dir="up">▲</div>
+  <div></div>
+  <div class="touch-btn" data-dir="left">◄</div>
+  <div class="touch-btn" data-dir="wait">·</div>
+  <div class="touch-btn" data-dir="right">►</div>
+  <div></div>
+  <div class="touch-btn" data-dir="down">▼</div>
+  <div></div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ============================================================
+// DUNGEON NEURAL — Roguelike Procedural
+// ============================================================
+
+const T = {
+  WALL: 0, FLOOR: 1, CORRIDOR: 2, DOOR: 3,
+  STAIRS_DOWN: 4, STAIRS_UP: 5,
+  CHEST: 6, FOUNTAIN: 7, SHRINE: 8
+};
+
+const TILE_SIZE = 20;
+const MAP_W = 50;
+const MAP_H = 38;
+const FOV_RADIUS = 8;
+const MAX_FLOOR = 10;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const miniCanvas = document.getElementById('minimap-canvas');
+const miniCtx = miniCanvas.getContext('2d');
+
+// ---- AUDIO ENGINE (procedural Web Audio) ----
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playSound(type) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  switch(type) {
+    case 'step':
+      osc.frequency.setValueAtTime(120 + Math.random() * 40, now);
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.start(now); osc.stop(now + 0.08);
+      break;
+    case 'hit':
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+      osc.type = 'sawtooth';
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+      break;
+    case 'hurt':
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+      osc.type = 'square';
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      break;
+    case 'pickup':
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.12);
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+      break;
+    case 'levelup':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.setValueAtTime(600, now + 0.1);
+      osc.frequency.setValueAtTime(800, now + 0.2);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.setValueAtTime(0.1, now + 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now); osc.stop(now + 0.4);
+      break;
+    case 'death':
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(50, now + 0.8);
+      osc.type = 'sawtooth';
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc.start(now); osc.stop(now + 0.8);
+      break;
+    case 'stairs':
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.setValueAtTime(500, now + 0.1);
+      osc.frequency.setValueAtTime(700, now + 0.2);
+      osc.frequency.setValueAtTime(900, now + 0.3);
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now); osc.stop(now + 0.4);
+      break;
+    case 'boss':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(80, now);
+      osc.frequency.setValueAtTime(60, now + 0.2);
+      osc.frequency.setValueAtTime(80, now + 0.3);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now); osc.stop(now + 0.4);
+      break;
+  }
+}
+
+// ---- BSP DUNGEON GENERATOR ----
+class BSPNode {
+  constructor(x, y, w, h) {
+    this.x = x; this.y = y;
+    this.w = w; this.h = h;
+    this.left = null; this.right = null;
+    this.room = null;
+  }
+
+  split() {
+    if (this.left || this.right) return;
+
+    const MIN_SIZE = 6;
+    const horiz = Math.random() > (this.w > this.h ? 0.3 : 0.7);
+
+    const max = (horiz ? this.h : this.w) - MIN_SIZE;
+    if (max <= MIN_SIZE) return;
+
+    const split = Math.floor(Math.random() * (max - MIN_SIZE)) + MIN_SIZE;
+
+    if (horiz) {
+      this.left = new BSPNode(this.x, this.y, this.w, split);
+      this.right = new BSPNode(this.x, this.y + split, this.w, this.h - split);
+    } else {
+      this.left = new BSPNode(this.x, this.y, split, this.h);
+      this.right = new BSPNode(this.x + split, this.y, this.w - split, this.h);
+    }
+
+    this.left.split();
+    this.right.split();
+  }
+
+  createRooms(map) {
+    if (this.left && this.right) {
+      this.left.createRooms(map);
+      this.right.createRooms(map);
+      this.connectRooms(map, this.left.getRoom(), this.right.getRoom());
+    } else {
+      const rw = Math.max(3, Math.floor(Math.random() * (this.w - 4)) + 3);
+      const rh = Math.max(3, Math.floor(Math.random() * (this.h - 4)) + 3);
+      const rx = this.x + Math.floor(Math.random() * (this.w - rw - 2)) + 1;
+      const ry = this.y + Math.floor(Math.random() * (this.h - rh - 2)) + 1;
+
+      this.room = { x: rx, y: ry, w: rw, h: rh, cx: Math.floor(rx + rw/2), cy: Math.floor(ry + rh/2) };
+
+      for (let y = ry; y < ry + rh; y++)
+        for (let x = rx; x < rx + rw; x++)
+          map[y][x] = T.FLOOR;
+    }
+  }
+
+  getRoom() {
+    if (this.room) return this.room;
+    const lr = this.left ? this.left.getRoom() : null;
+    const rr = this.right ? this.right.getRoom() : null;
+    if (!lr) return rr;
+    if (!rr) return lr;
+    return Math.random() > 0.5 ? lr : rr;
+  }
+
+  connectRooms(map, r1, r2) {
+    if (!r1 || !r2) return;
+    let x = r1.cx, y = r1.cy;
+    const tx = r2.cx, ty = r2.cy;
+
+    while (x !== tx || y !== ty) {
+      if (map[y][x] === T.WALL) map[y][x] = T.CORRIDOR;
+      if (Math.random() > 0.5 && x !== tx) x += x < tx ? 1 : -1;
+      else if (y !== ty) y += y < ty ? 1 : -1;
+      else x += x < tx ? 1 : -1;
+    }
+  }
+}
+
+// ---- ITEM DEFINITIONS ----
+const ITEM_TYPES = {
+  health_potion:    { name: 'Poci\u00f3n de salud', icon: '\u2665', color: '#ff4444', desc: 'Restaura 20 HP', effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); } },
+  big_health_potion:{ name: 'Poci\u00f3n mayor', icon: '\u2665', color: '#ff6688', desc: 'Restaura 50 HP', effect: (p) => { p.hp = Math.min(p.maxHp, p.hp + 50); } },
+  sword:           { name: 'Espada', icon: '\u2694', color: '#aaaaff', desc: 'ATK +3', equip: true, stat: 'atk', bonus: 3 },
+  great_sword:     { name: 'Espad\u00f3n', icon: '\u2694', color: '#ccddff', desc: 'ATK +6', equip: true, stat: 'atk', bonus: 6 },
+  shield:          { name: 'Escudo', icon: '\u25a3', color: '#66aaff', desc: 'DEF +3', equip: true, stat: 'def', bonus: 3 },
+  armor:           { name: 'Armadura', icon: '\u25a3', color: '#aaddff', desc: 'DEF +5', equip: true, stat: 'def', bonus: 5 },
+  scroll_fire:     { name: 'Pergamino \u00edgneo', icon: '\u2726', color: '#ff8800', desc: 'Da\u00f1o 15 a todos los enemigos visibles', effect: (p, g) => { g.damageVisibleEnemies(15); } },
+  scroll_ice:      { name: 'Pergamino glacial', icon: '\u2744', color: '#88ccff', desc: 'Congela enemigos 3 turnos', effect: (p, g) => { g.freezeVisibleEnemies(3); } },
+  gold_pile:       { name: 'Oro', icon: '\u25c9', color: '#ffaa00', desc: '+15 oro', effect: (p) => { p.gold += 15; } },
+  gold_hoard:      { name: 'Tesoro', icon: '\u25c9', color: '#ffcc44', desc: '+40 oro', effect: (p) => { p.gold += 40; } },
+  ring_life:       { name: 'Anillo vital', icon: '\u25c7', color: '#88ff88', desc: 'MaxHP +15', equip: true, stat: 'maxHp', bonus: 15 },
+  ring_power:      { name: 'Anillo de poder', icon: '\u25c7', color: '#ff88ff', desc: 'ATK +4', equip: true, stat: 'atk', bonus: 4 },
+};
+
+// ---- ENEMY DEFINITIONS ----
+const ENEMY_DEFS = {
+  rat:       { name: 'Rata',     icon: 'r', color: '#aa8866', hp: 8,  atk: 2, def: 0, exp: 3, gold: 2, speed: 1 },
+  bat:       { name: 'Murci\u00e9lago', icon: 'b', color: '#8866aa', hp: 6,  atk: 3, def: 0, exp: 4, gold: 1, speed: 2 },
+  slime:     { name: 'Slime',    icon: 's', color: '#66cc44', hp: 15, atk: 3, def: 1, exp: 6, gold: 5, speed: 1 },
+  skeleton:  { name: 'Esqueleto',icon: 'S', color: '#ccccaa', hp: 20, atk: 5, def: 2, exp: 10, gold: 8, speed: 1 },
+  goblin:    { name: 'Goblin',   icon: 'g', color: '#44aa44', hp: 18, atk: 6, def: 2, exp: 12, gold: 10, speed: 1 },
+  orc:       { name: 'Orco',     icon: 'O', color: '#886644', hp: 35, atk: 8, def: 4, exp: 20, gold: 15, speed: 1 },
+  wraith:    { name: 'Espectro', icon: 'W', color: '#aaaaee', hp: 25, atk: 10, def: 1, exp: 25, gold: 20, speed: 2 },
+  demon:     { name: 'Demonio',  icon: 'D', color: '#ff4444', hp: 50, atk: 12, def: 5, exp: 40, gold: 30, speed: 1 },
+  dragon:    { name: 'Drag\u00f3n', icon: 'X', color: '#ff8800', hp: 100, atk: 18, def: 8, exp: 80, gold: 100, speed: 1, boss: true },
+  necro:     { name: 'Nigromante',icon: 'N', color: '#aa44ff', hp: 70, atk: 14, def: 3, exp: 60, gold: 50, speed: 1, boss: true },
+};
+
+const FLOOR_ENEMIES = [
+  ['rat', 'bat'],
+  ['rat', 'bat', 'slime'],
+  ['slime', 'bat', 'goblin'],
+  ['goblin', 'skeleton'],
+  ['skeleton', 'goblin', 'orc'],
+  ['orc', 'wraith', 'skeleton'],
+  ['orc', 'wraith', 'demon'],
+  ['demon', 'wraith', 'orc'],
+  ['demon', 'wraith'],
+  ['demon'],
+];
+
+const FLOOR_ITEMS = [
+  ['health_potion', 'sword', 'gold_pile'],
+  ['health_potion', 'sword', 'shield', 'gold_pile'],
+  ['health_potion', 'big_health_potion', 'sword', 'gold_pile', 'gold_hoard'],
+  ['health_potion', 'great_sword', 'shield', 'scroll_fire', 'gold_hoard'],
+  ['big_health_potion', 'armor', 'scroll_fire', 'scroll_ice', 'gold_hoard', 'ring_life'],
+  ['big_health_potion', 'great_sword', 'armor', 'scroll_fire', 'gold_hoard', 'ring_power'],
+  ['big_health_potion', 'great_sword', 'armor', 'scroll_ice', 'scroll_fire', 'ring_life'],
+  ['big_health_potion', 'great_sword', 'armor', 'scroll_ice', 'gold_hoard', 'ring_power'],
+  ['big_health_potion', 'great_sword', 'armor', 'scroll_fire', 'scroll_ice', 'ring_life', 'ring_power'],
+  ['big_health_potion', 'great_sword', 'armor', 'scroll_fire', 'scroll_ice'],
+];
+
+// ---- GAME STATE ----
+let game = null;
+
+class Entity {
+  constructor(x, y, type, def) {
+    this.x = x; this.y = y;
+    this.type = type;
+    this.name = def.name;
+    this.hp = def.hp;
+    this.maxHp = def.hp;
+    this.atk = def.atk;
+    this.def = def.def;
+    this.exp = def.exp;
+    this.gold = def.gold;
+    this.speed = def.speed || 1;
+    this.icon = def.icon;
+    this.color = def.color;
+    this.boss = def.boss || false;
+    this.frozen = 0;
+    this.flashTimer = 0;
+  }
+}
+
+class Item {
+  constructor(x, y, type) {
+    this.x = x; this.y = y;
+    this.type = type;
+    const def = ITEM_TYPES[type];
+    this.name = def.name;
+    this.icon = def.icon;
+    this.color = def.color;
+    this.desc = def.desc;
+  }
+}
+
+class Player {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.hp = 50; this.maxHp = 50;
+    this.baseAtk = 5; this.baseDef = 2;
+    this.atk = 5; this.def = 2;
+    this.gold = 0; this.exp = 0; this.level = 1;
+    this.inventory = [];
+    this.equipped = [];
+    this.visible = new Set();
+    this.explored = new Set();
+    this.kills = 0;
+    this.turns = 0;
+  }
+
+  recalcStats() {
+    this.atk = this.baseAtk;
+    this.def = this.baseDef;
+    let maxHpBonus = 0;
+    for (const eq of this.equipped) {
+      const def = ITEM_TYPES[eq];
+      if (def.stat === 'maxHp') maxHpBonus += def.bonus;
+      else if (def.stat === 'atk') this.atk += def.bonus;
+      else if (def.stat === 'def') this.def += def.bonus;
+    }
+    this.maxHp = 50 + (this.level - 1) * 10 + maxHpBonus;
+    if (this.hp > this.maxHp) this.hp = this.maxHp;
+  }
+
+  checkLevelUp() {
+    const needed = this.level * 20;
+    if (this.exp >= needed) {
+      this.exp -= needed;
+      this.level++;
+      this.baseAtk += 1;
+      this.baseDef += 1;
+      this.maxHp += 10;
+      this.hp = this.maxHp;
+      this.recalcStats();
+      return true;
+    }
+    return false;
+  }
+}
+
+class Game {
+  constructor() {
+    this.floor = 1;
+    this.map = [];
+    this.rooms = [];
+    this.enemies = [];
+    this.items = [];
+    this.player = null;
+    this.messages = [];
+    this.state = 'playing'; // playing, dead, won
+    this.animating = false;
+    this.camera = { x: 0, y: 0 };
+    this.damageFloats = [];
+    this.particles = [];
+
+    this.generateFloor();
+  }
+
+  generateFloor() {
+    this.map = [];
+    this.rooms = [];
+    this.enemies = [];
+    this.items = [];
+    this.damageFloats = [];
+    this.particles = [];
+
+    for (let y = 0; y < MAP_H; y++) {
+      this.map[y] = [];
+      for (let x = 0; x < MAP_W; x++)
+        this.map[y][x] = T.WALL;
+    }
+
+    const root = new BSPNode(1, 1, MAP_W - 2, MAP_H - 2);
+    root.split();
+    root.createRooms(this.map);
+
+    this.collectRooms(root);
+
+    // Place stairs
+    const upRoom = this.rooms[0];
+    this.map[upRoom.cy][upRoom.cx] = T.STAIRS_UP;
+
+    let downRoom;
+    if (this.rooms.length > 1) {
+      downRoom = this.rooms[this.rooms.length - 1];
+    } else {
+      downRoom = upRoom;
+    }
+
+    if (this.floor < MAX_FLOOR) {
+      this.map[downRoom.cy][downRoom.cx] = T.STAIRS_DOWN;
+    }
+
+    // Place player
+    if (!this.player) {
+      this.player = new Player(upRoom.cx, upRoom.cy);
+    } else {
+      this.player.x = upRoom.cx;
+      this.player.y = upRoom.cy;
+    }
+    this.player.recalcStats();
+
+    // Place enemies
+    const floorIdx = Math.min(this.floor - 1, FLOOR_ENEMIES.length - 1);
+    const enemyPool = FLOOR_ENEMIES[floorIdx];
+    const numEnemies = 4 + this.floor * 2 + (this.floor >= 5 ? 2 : 0);
+
+    for (let i = 0; i < numEnemies; i++) {
+      const room = this.rooms[1 + Math.floor(Math.random() * (this.rooms.length - 1))];
+      if (!room) continue;
+      const ex = room.x + Math.floor(Math.random() * room.w);
+      const ey = room.y + Math.floor(Math.random() * room.h);
+      if (this.isBlocked(ex, ey)) continue;
+      const eType = enemyPool[Math.floor(Math.random() * enemyPool.length)];
+      const scaling = 1 + (this.floor - 1) * 0.15;
+      const def = ENEMY_DEFS[eType];
+      const scaledDef = {
+        ...def,
+        hp: Math.floor(def.hp * scaling),
+        maxHp: Math.floor(def.hp * scaling),
+        atk: Math.floor(def.atk * scaling),
+        def: Math.floor(def.def * scaling),
+        exp: Math.floor(def.exp * scaling),
+      };
+      this.enemies.push(new Entity(ex, ey, eType, scaledDef));
+    }
+
+    // Boss on floor 5 and 10
+    if (this.floor === 5 || this.floor === MAX_FLOOR) {
+      const bossRoom = this.rooms[Math.floor(this.rooms.length / 2)] || this.rooms[this.rooms.length - 1];
+      const bx = bossRoom.cx;
+      const by = bossRoom.cy;
+      const bossType = this.floor === 5 ? 'necro' : 'dragon';
+      this.enemies.push(new Entity(bx, by, bossType, { ...ENEMY_DEFS[bossType], hp: Math.floor(ENEMY_DEFS[bossType].hp * scaling), maxHp: Math.floor(ENEMY_DEFS[bossType].hp * scaling), atk: Math.floor(ENEMY_DEFS[bossType].atk * scaling) }));
+    }
+
+    // Place items
+    const itemPool = FLOOR_ITEMS[floorIdx];
+    const numItems = 3 + Math.floor(this.floor * 0.8);
+
+    for (let i = 0; i < numItems; i++) {
+      const room = this.rooms[Math.floor(Math.random() * this.rooms.length)];
+      const ix = room.x + Math.floor(Math.random() * room.w);
+      const iy = room.y + Math.floor(Math.random() * room.h);
+      if (this.map[iy][ix] !== T.FLOOR) continue;
+      const iType = itemPool[Math.floor(Math.random() * itemPool.length)];
+      this.items.push(new Item(ix, iy, iType));
+    }
+
+    // Special tiles
+    for (const room of this.rooms) {
+      if (Math.random() < 0.2) {
+        const fx = room.x + 1 + Math.floor(Math.random() * (room.w - 2));
+        const fy = room.y + 1 + Math.floor(Math.random() * (room.h - 2));
+        if (this.map[fy][fx] === T.FLOOR) {
+          this.map[fy][fx] = Math.random() < 0.5 ? T.FOUNTAIN : T.SHRINE;
+        }
+      }
+    }
+
+    this.computeFOV();
+    this.addMessage(`Desciendes al piso ${this.floor}`, 'level');
+  }
+
+  collectRooms(node) {
+    if (node.room) {
+      this.rooms.push(node.room);
+    }
+    if (node.left) this.collectRooms(node.left);
+    if (node.right) this.collectRooms(node.right);
+  }
+
+  isBlocked(x, y) {
+    if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) return true;
+    if (this.map[y][x] === T.WALL) return true;
+    if (this.enemies.some(e => e.x === x && e.y === y && e.hp > 0)) return true;
+    if (this.player.x === x && this.player.y === y) return true;
+    return false;
+  }
+
+  isWalkable(x, y) {
+    if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) return false;
+    const t = this.map[y][x];
+    return t !== T.WALL;
+  }
+
+  computeFOV() {
+    const p = this.player;
+    p.visible.clear();
+    const r = FOV_RADIUS;
+
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx*dx + dy*dy > r*r) continue;
+        const tx = p.x + dx, ty = p.y + dy;
+        if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) continue;
+        if (this.castRay(p.x, p.y, tx, ty)) {
+          p.visible.add(`${tx},${ty}`);
+          p.explored.add(`${tx},${ty}`);
+        }
+      }
+    }
+  }
+
+  castRay(x0, y0, x1, y1) {
+    const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy, cx = x0, cy = y0;
+
+    while (cx !== x1 || cy !== y1) {
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; cx += sx; }
+      if (e2 < dx) { err += dx; cy += sy; }
+      if (cx === x1 && cy === y1) return true;
+      if (cx < 0 || cx >= MAP_W || cy < 0 || cy >= MAP_H) return false;
+      if (this.map[cy][cx] === T.WALL) return false;
+    }
+    return true;
+  }
+
+  movePlayer(dx, dy) {
+    if (this.state !== 'playing' || this.animating) return;
+
+    const nx = this.player.x + dx;
+    const ny = this.player.y + dy;
+
+    initAudio();
+
+    // Check enemy at target
+    const enemy = this.enemies.find(e => e.x === nx && e.y === ny && e.hp > 0);
+    if (enemy) {
+      this.attackEnemy(this.player, enemy);
+      playSound('hit');
+    } else if (this.isWalkable(nx, ny) && !this.enemies.some(e => e.x === nx && e.y === ny && e.hp > 0)) {
+      this.player.x = nx;
+      this.player.y = ny;
+      this.checkTileInteraction();
+      playSound('step');
+    }
+
+    this.player.turns++;
+    this.processEnemies();
+    this.computeFOV();
+    this.updateHUD();
+
+    // Check level up
+    if (this.player.checkLevelUp()) {
+      this.addMessage(`Nivel ${this.player.level}! ATK+1 DEF+1 MaxHP+10`, 'level');
+      playSound('levelup');
+      this.spawnParticles(this.player.x, this.player.y, '#00ff88', 12);
+    }
+
+    // Check death
+    if (this.player.hp <= 0) {
+      this.state = 'dead';
+      playSound('death');
+      this.showDeathScreen();
+    }
+  }
+
+  attackEnemy(attacker, defender) {
+    const dmg = Math.max(1, attacker.atk - defender.def + Math.floor(Math.random() * 3) - 1);
+    defender.hp -= dmg;
+    defender.flashTimer = 6;
+    this.addFloat(defender.x, defender.y, `-${dmg}`, '#ff4444');
+    this.spawnParticles(defender.x, defender.y, defender.color, 4);
+
+    if (attacker === this.player) {
+      this.addMessage(`Atacas ${defender.name} por ${dmg} da\u00f1o`, 'combat');
+    }
+
+    if (defender.hp <= 0) {
+      this.addMessage(`${defender.name} derrotado! +${defender.exp}exp +${defender.gold}oro`, 'item');
+      if (defender.boss) {
+        this.addMessage(`\u26a1 JEFE ELIMINADO! \u26a1`, 'level');
+        playSound('boss');
+      }
+      this.player.exp += defender.exp;
+      this.player.gold += defender.gold;
+      this.player.kills++;
+      this.spawnParticles(defender.x, defender.y, '#ffaa00', 8);
+
+      if (defender.boss && this.floor === MAX_FLOOR && this.enemies.filter(e => e.hp > 0 && e.boss).length === 0) {
+        this.state = 'won';
+        this.showWinScreen();
+      }
+    }
+  }
+
+  processEnemies() {
+    for (const e of this.enemies) {
+      if (e.hp <= 0) continue;
+
+      if (e.frozen > 0) { e.frozen--; continue; }
+
+      const p = this.player;
+      const dist = Math.abs(e.x - p.x) + Math.abs(e.y - p.y);
+
+      if (dist <= FOV_RADIUS + 2 || e.boss) {
+        // Simple pathfinding toward player
+        for (let move = 0; move < e.speed; move++) {
+          const dx = Math.sign(p.x - e.x);
+          const dy = Math.sign(p.y - e.y);
+
+          // Try to attack player
+          if (e.x + dx === p.x && e.y + dy === p.y) {
+            const dmg = Math.max(1, e.atk - this.player.def + Math.floor(Math.random() * 3) - 1);
+            this.player.hp -= dmg;
+            this.addFloat(p.x, p.y, `-${dmg}`, '#ff6666');
+            this.addMessage(`${e.name} te ataca por ${dmg} da\u00f1o`, 'combat');
+            playSound('hurt');
+            break;
+          }
+
+          // Move toward player
+          let moved = false;
+          const dirs = [];
+          if (dx !== 0 && dy !== 0) {
+            dirs.push([dx, 0], [0, dy], [dx, dy]);
+          } else if (dx !== 0) {
+            dirs.push([dx, 0], [0, 1], [0, -1]);
+          } else if (dy !== 0) {
+            dirs.push([0, dy], [1, 0], [-1, 0]);
+          }
+
+          for (const [mx, my] of dirs) {
+            const nx = e.x + mx, ny = e.y + my;
+            if (nx === p.x && ny === p.y) {
+              const dmg = Math.max(1, e.atk - this.player.def + Math.floor(Math.random() * 3) - 1);
+              this.player.hp -= dmg;
+              this.addFloat(p.x, p.y, `-${dmg}`, '#ff6666');
+              this.addMessage(`${e.name} te ataca por ${dmg} da\u00f1o`, 'combat');
+              playSound('hurt');
+              moved = true;
+              break;
+            }
+            if (this.isWalkable(nx, ny) && !this.enemies.some(o => o !== e && o.x === nx && o.y === ny && o.hp > 0) && !(nx === p.x && ny === p.y)) {
+              e.x = nx; e.y = ny;
+              moved = true;
+              break;
+            }
+          }
+          if (!moved) break;
+        }
+      }
+    }
+
+    // Clean dead enemies
+    this.enemies = this.enemies.filter(e => e.hp > 0);
+  }
+
+  checkTileInteraction() {
+    const p = this.player;
+    const tile = this.map[p.y][p.x];
+
+    if (tile === T.STAIRS_DOWN) {
+      if (this.floor < MAX_FLOOR) {
+        this.floor++;
+        playSound('stairs');
+        this.generateFloor();
+      }
+    } else if (tile === T.FOUNTAIN) {
+      const heal = Math.floor(this.player.maxHp * 0.3);
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+      this.addMessage(`Fuente m\u00e1gica: +${heal} HP`, 'item');
+      this.map[p.y][p.x] = T.FLOOR;
+      playSound('pickup');
+    } else if (tile === T.SHRINE) {
+      this.player.baseAtk += 1;
+      this.player.recalcStats();
+      this.addMessage(`Santuario: ATK +1 permanente`, 'level');
+      this.map[p.y][p.x] = T.FLOOR;
+      playSound('levelup');
+    }
+
+    // Auto-pickup gold
+    const goldItem = this.items.find(i => i.x === p.x && i.y === p.y && (i.type === 'gold_pile' || i.type === 'gold_hoard'));
+    if (goldItem) {
+      ITEM_TYPES[goldItem.type].effect(this.player, this);
+      this.addMessage(`Recogiste ${goldItem.name}`, 'item');
+      this.items = this.items.filter(i => i !== goldItem);
+      playSound('pickup');
+    }
+  }
+
+  pickupItem() {
+    const p = this.player;
+    const item = this.items.find(i => i.x === p.x && i.y === p.y);
+    if (!item) {
+      this.addMessage('No hay nada aqu\u00ed', 'info');
+      return;
+    }
+    if (this.player.inventory.length >= 9) {
+      this.addMessage('Inventario lleno', 'info');
+      return;
+    }
+    this.player.inventory.push(item.type);
+    this.items = this.items.filter(i => i !== item);
+    this.addMessage(`Recogiste ${item.name}`, 'item');
+    playSound('pickup');
+
+    // Auto-equip if better
+    const def = ITEM_TYPES[item.type];
+    if (def.equip) {
+      this.tryEquip(item.type);
+    }
+  }
+
+  useItem(index) {
+    if (index >= this.player.inventory.length) return;
+    const type = this.player.inventory[index];
+    const def = ITEM_TYPES[type];
+
+    if (def.equip) {
+      this.tryEquip(type);
+      this.player.inventory.splice(index, 1);
+    } else {
+      def.effect(this.player, this);
+      this.addMessage(`Usaste ${def.name}`, 'item');
+      this.player.inventory.splice(index, 1);
+      playSound('pickup');
+    }
+    this.player.recalcStats();
+    this.updateHUD();
+  }
+
+  tryEquip(type) {
+    const def = ITEM_TYPES[type];
+    if (!def.equip) return;
+
+    // Remove existing equip of same stat
+    this.player.equipped = this.player.equipped.filter(e => ITEM_TYPES[e].stat !== def.stat);
+    this.player.equipped.push(type);
+    this.addMessage(`Equipaste ${def.name} (${def.desc})`, 'item');
+    this.player.recalcStats();
+    playSound('pickup');
+  }
+
+  waitTurn() {
+    if (this.state !== 'playing') return;
+    this.player.turns++;
+    this.processEnemies();
+    this.computeFOV();
+    this.updateHUD();
+
+    if (this.player.hp <= 0) {
+      this.state = 'dead';
+      playSound('death');
+      this.showDeathScreen();
+    }
+  }
+
+  damageVisibleEnemies(dmg) {
+    for (const e of this.enemies) {
+      if (this.player.visible.has(`${e.x},${e.y}`)) {
+        e.hp -= dmg;
+        e.flashTimer = 6;
+        this.addFloat(e.x, e.y, `-${dmg}`, '#ff8800');
+        this.addMessage(`\u00cdgneo golpea ${e.name} por ${dmg}`, 'combat');
+      }
+    }
+    this.enemies = this.enemies.filter(e => e.hp > 0);
+  }
+
+  freezeVisibleEnemies(turns) {
+    for (const e of this.enemies) {
+      if (this.player.visible.has(`${e.x},${e.y}`)) {
+        e.frozen = turns;
+        this.addMessage(`${e.name} congelado ${turns} turnos`, 'info');
+      }
+    }
+  }
+
+  addMessage(text, type = 'info') {
+    this.messages.push({ text, type });
+    if (this.messages.length > 50) this.messages.shift();
+    this.updateMessages();
+  }
+
+  addFloat(x, y, text, color) {
+    this.damageFloats.push({ x, y, text, color, timer: 30 });
+  }
+
+  spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      this.particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 2,
+        vy: (Math.random() - 0.5) * 2,
+        color,
+        life: 20 + Math.floor(Math.random() * 15)
+      });
+    }
+  }
+
+  updateMessages() {
+    const log = document.getElementById('message-log');
+    log.innerHTML = this.messages.slice(-15).map(m =>
+      `<div class="msg msg-${m.type}">${m.text}</div>`
+    ).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  updateHUD() {
+    const p = this.player;
+    const hpPct = Math.max(0, p.hp / p.maxHp * 100);
+    document.getElementById('hp-bar').style.width = hpPct + '%';
+    document.getElementById('hp-text').textContent = `${p.hp}/${p.maxHp}`;
+    document.getElementById('atk-text').textContent = p.atk;
+    document.getElementById('def-text').textContent = p.def;
+    document.getElementById('floor-text').textContent = this.floor;
+    document.getElementById('gold-text').textContent = p.gold;
+    document.getElementById('exp-text').textContent = `${p.exp}/${p.level * 20}`;
+
+    const invList = document.getElementById('inventory-list');
+    invList.innerHTML = p.inventory.slice(0, 9).map((type, i) => {
+      const def = ITEM_TYPES[type];
+      return `<li><span class="item-icon" style="color:${def.color}">${def.icon}</span><span class="item-name">${def.name}</span><span class="item-stat">${i + 1}</span></li>`;
+    }).join('');
+
+    // Show equipped
+    if (p.equipped.length > 0) {
+      const eqHtml = '<li style="color:#00ff88;border-top:1px solid #333;padding-top:4px;margin-top:4px;">Equipado:</li>' +
+        p.equipped.map(e => {
+          const def = ITEM_TYPES[e];
+          return `<li><span style="color:${def.color}">${def.icon}</span> ${def.name}</li>`;
+        }).join('');
+      invList.innerHTML += eqHtml;
+    }
+  }
+
+  showDeathScreen() {
+    const p = this.player;
+    document.getElementById('death-stats').innerHTML =
+      `Llegaste al piso ${this.floor}<br>` +
+      `Nivel: ${p.level}<br>` +
+      `Enemigos eliminados: ${p.kills}<br>` +
+      `Oro acumulado: ${p.gold}<br>` +
+      `Turnos: ${p.turns}`;
+    document.getElementById('death-screen').style.display = 'flex';
+  }
+
+  showWinScreen() {
+    const p = this.player;
+    document.getElementById('win-stats').innerHTML =
+      `Completaste los ${MAX_FLOOR} pisos!<br>` +
+      `Nivel final: ${p.level}<br>` +
+      `Enemigos eliminados: ${p.kills}<br>` +
+      `Oro total: ${p.gold}<br>` +
+      `Turnos: ${p.turns}`;
+    document.getElementById('win-screen').style.display = 'flex';
+  }
+}
+
+// ---- RENDERING ----
+const TILE_COLORS = {
+  [T.WALL]: '#1a1a2e',
+  [T.FLOOR]: '#2a2a3a',
+  [T.CORRIDOR]: '#252535',
+  [T.DOOR]: '#3a3a4a',
+  [T.STAIRS_DOWN]: '#1a3a5a',
+  [T.STAIRS_UP]: '#3a5a1a',
+  [T.CHEST]: '#5a4a2a',
+  [T.FOUNTAIN]: '#2a4a5a',
+  [T.SHRINE]: '#4a2a5a',
+};
+
+const TILE_ICONS = {
+  [T.STAIRS_DOWN]: '\u25bc',
+  [T.STAIRS_UP]: '\u25b2',
+  [T.FOUNTAIN]: '\u224b',
+  [T.SHRINE]: '\u2726',
+};
+
+let showMinimap = false;
+let frameCount = 0;
+
+function render() {
+  if (!game || !game.player) { requestAnimationFrame(render); return; }
+
+  const p = game.player;
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Camera
+  const camX = p.x * TILE_SIZE - canvas.width / 2;
+  const camY = p.y * TILE_SIZE - canvas.height / 2;
+
+  ctx.save();
+  ctx.translate(-camX, -camY);
+
+  // Draw tiles
+  for (let y = Math.max(0, Math.floor(camY / TILE_SIZE)); y < Math.min(MAP_H, Math.ceil((camY + canvas.height) / TILE_SIZE)); y++) {
+    for (let x = Math.max(0, Math.floor(camX / TILE_SIZE)); x < Math.min(MAP_W, Math.ceil((camX + canvas.width) / TILE_SIZE)); x++) {
+      const key = `${x},${y}`;
+      const visible = p.visible.has(key);
+      const explored = p.explored.has(key);
+
+      if (!explored) continue;
+
+      const tile = game.map[y][x];
+      const px = x * TILE_SIZE;
+      const py = y * TILE_SIZE;
+
+      // Base color
+      ctx.fillStyle = TILE_COLORS[tile] || '#2a2a3a';
+      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+      // Fog for explored but not visible
+      if (!visible) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+        continue;
+      }
+
+      // Torchlight flicker
+      const dist = Math.sqrt((x - p.x) ** 2 + (y - p.y) ** 2);
+      const flicker = 0.85 + Math.sin(frameCount * 0.05 + x * 0.3 + y * 0.7) * 0.08;
+      const brightness = Math.max(0, 1 - dist / (FOV_RADIUS + 2)) * flicker;
+
+      // Tile icons
+      if (TILE_ICONS[tile]) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `${TILE_SIZE - 4}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(TILE_ICONS[tile], px + TILE_SIZE / 2, py + TILE_SIZE / 2);
+      }
+
+      // Wall edges
+      if (tile === T.WALL) {
+        ctx.fillStyle = '#222238';
+        ctx.fillRect(px, py, TILE_SIZE, 1);
+        ctx.fillRect(px, py, 1, TILE_SIZE);
+      }
+
+      // Apply brightness overlay
+      ctx.fillStyle = `rgba(0,0,0,${1 - brightness})`;
+      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+    }
+  }
+
+  // Draw items on ground
+  for (const item of game.items) {
+    if (!p.visible.has(`${item.x},${item.y}`)) continue;
+    const ix = item.x * TILE_SIZE + TILE_SIZE / 2;
+    const iy = item.y * TILE_SIZE + TILE_SIZE / 2 + Math.sin(frameCount * 0.08 + item.x) * 2;
+    ctx.fillStyle = item.color;
+    ctx.font = `${TILE_SIZE - 4}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.icon, ix, iy);
+  }
+
+  // Draw enemies
+  for (const e of game.enemies) {
+    if (e.hp <= 0) continue;
+    if (!p.visible.has(`${e.x},${e.y}`)) continue;
+
+    const ex = e.x * TILE_SIZE + TILE_SIZE / 2;
+    const ey = e.y * TILE_SIZE + TILE_SIZE / 2;
+
+    // Flash effect
+    if (e.flashTimer > 0) {
+      ctx.fillStyle = '#ff000066';
+      ctx.fillRect(e.x * TILE_SIZE, e.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      e.flashTimer--;
+    }
+
+    // Frozen indicator
+    if (e.frozen > 0) {
+      ctx.fillStyle = '#88ccff44';
+      ctx.fillRect(e.x * TILE_SIZE, e.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+
+    ctx.fillStyle = e.color;
+    ctx.font = `bold ${TILE_SIZE - 2}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(e.icon, ex, ey);
+
+    // HP bar
+    if (e.hp < e.maxHp) {
+      const barW = TILE_SIZE - 4;
+      const barH = 2;
+      const hpPct = e.hp / e.maxHp;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(e.x * TILE_SIZE + 2, e.y * TILE_SIZE - 3, barW, barH);
+      ctx.fillStyle = hpPct > 0.5 ? '#44ff44' : hpPct > 0.25 ? '#ffaa00' : '#ff4444';
+      ctx.fillRect(e.x * TILE_SIZE + 2, e.y * TILE_SIZE - 3, barW * hpPct, barH);
+    }
+
+    // Boss indicator
+    if (e.boss) {
+      ctx.strokeStyle = '#ff4444';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(e.x * TILE_SIZE + 1, e.y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+    }
+  }
+
+  // Draw player
+  const ppx = p.x * TILE_SIZE + TILE_SIZE / 2;
+  const ppy = p.y * TILE_SIZE + TILE_SIZE / 2;
+
+  // Player glow
+  const glowRadius = 30 + Math.sin(frameCount * 0.06) * 5;
+  const glow = ctx.createRadialGradient(ppx, ppy, 0, ppx, ppy, glowRadius);
+  glow.addColorStop(0, 'rgba(0,255,136,0.15)');
+  glow.addColorStop(1, 'rgba(0,255,136,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(ppx - glowRadius, ppy - glowRadius, glowRadius * 2, glowRadius * 2);
+
+  ctx.fillStyle = '#00ff88';
+  ctx.font = `bold ${TILE_SIZE}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('@', ppx, ppy);
+
+  // Damage floats
+  game.damageFloats = game.damageFloats.filter(f => {
+    f.timer--;
+    f.y -= 0.5;
+    const alpha = f.timer / 30;
+    ctx.fillStyle = f.color.replace(')', `,${alpha})`).replace('rgb', 'rgba');
+    if (f.color.startsWith('#')) {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = f.color;
+    }
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.text, f.x * TILE_SIZE + TILE_SIZE / 2, f.y * TILE_SIZE);
+    ctx.globalAlpha = 1;
+    return f.timer > 0;
+  });
+
+  // Particles
+  game.particles = game.particles.filter(pt => {
+    pt.x += pt.vx * 0.05;
+    pt.y += pt.vy * 0.05;
+    pt.life--;
+    const alpha = pt.life / 35;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = pt.color;
+    ctx.fillRect(pt.x * TILE_SIZE + TILE_SIZE / 2, pt.y * TILE_SIZE + TILE_SIZE / 2, 3, 3);
+    ctx.globalAlpha = 1;
+    return pt.life > 0;
+  });
+
+  ctx.restore();
+
+  // Render minimap
+  renderMinimap();
+
+  frameCount++;
+  requestAnimationFrame(render);
+}
+
+function renderMinimap() {
+  const p = game.player;
+  const scale = miniCanvas.width / MAP_W;
+  miniCtx.fillStyle = '#0a0a0f';
+  miniCtx.fillRect(0, 0, miniCanvas.width, miniCanvas.height);
+
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      if (!p.explored.has(`${x},${y}`)) continue;
+      const tile = game.map[y][x];
+      if (tile === T.WALL) continue;
+
+      miniCtx.fillStyle = p.visible.has(`${x},${y}`)
+        ? (tile === T.STAIRS_DOWN ? '#4488ff' : tile === T.STAIRS_UP ? '#44ff88' : tile === T.FOUNTAIN ? '#44aaff' : tile === T.SHRINE ? '#aa44ff' : '#444466')
+        : '#222233';
+      miniCtx.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
+
+  // Enemies
+  for (const e of game.enemies) {
+    if (p.visible.has(`${e.x},${e.y}`) && e.hp > 0) {
+      miniCtx.fillStyle = e.boss ? '#ff4444' : '#ff6644';
+      miniCtx.fillRect(e.x * scale, e.y * scale, scale, scale);
+    }
+  }
+
+  // Player
+  miniCtx.fillStyle = '#00ff88';
+  miniCtx.fillRect(p.x * scale - 1, p.y * scale - 1, scale + 2, scale + 2);
+}
+
+// ---- INPUT ----
+const keyMap = {
+  'ArrowUp': [0, -1], 'ArrowDown': [0, 1], 'ArrowLeft': [-1, 0], 'ArrowRight': [1, 0],
+  'w': [0, -1], 's': [0, 1], 'a': [-1, 0], 'd': [1, 0],
+  'W': [0, -1], 'S': [0, 1], 'A': [-1, 0], 'D': [1, 0],
+};
+
+document.addEventListener('keydown', (e) => {
+  if (game && game.state === 'playing') {
+    if (keyMap[e.key]) {
+      e.preventDefault();
+      const [dx, dy] = keyMap[e.key];
+      game.movePlayer(dx, dy);
+    } else if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      game.waitTurn();
+    } else if (e.key === 'e' || e.key === 'E') {
+      game.pickupItem();
+    } else if (e.key === 'm' || e.key === 'M') {
+      showMinimap = !showMinimap;
+    } else if (e.key >= '1' && e.key <= '9') {
+      game.useItem(parseInt(e.key) - 1);
+    }
+  }
+
+  if (e.key === 'Enter') {
+    const title = document.getElementById('title-screen');
+    if (!title.classList.contains('hidden')) {
+      title.classList.add('hidden');
+      document.getElementById('game-container').classList.add('active');
+      startGame();
+    }
+  }
+});
+
+// Touch controls
+document.querySelectorAll('.touch-btn').forEach(btn => {
+  btn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    initAudio();
+    const dir = btn.dataset.dir;
+    if (dir === 'up') game?.movePlayer(0, -1);
+    else if (dir === 'down') game?.movePlayer(0, 1);
+    else if (dir === 'left') game?.movePlayer(-1, 0);
+    else if (dir === 'right') game?.movePlayer(1, 0);
+    else if (dir === 'wait') game?.waitTurn();
+  });
+});
+
+// Responsive canvas
+function resizeCanvas() {
+  const maxW = Math.min(window.innerWidth - (window.innerWidth > 800 ? 240 : 0) - 20, 700);
+  const maxH = Math.min(window.innerHeight - 120, 500);
+  const size = Math.min(maxW, maxH);
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ---- START ----
+function startGame() {
+  document.getElementById('death-screen').style.display = 'none';
+  document.getElementById('win-screen').style.display = 'none';
+  game = new Game();
+  game.updateHUD();
+  game.addMessage('Bienvenido a la Mazmorra Neural', 'story');
+  game.addMessage('Encuentra la escalera (\u25bc) para descender', 'info');
+  game.addMessage('Derrota al Drag\u00f3n en el piso 10 para vencer', 'story');
+}
+
+render();
+</script>
+</body>
+</html>
