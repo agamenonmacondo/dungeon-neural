@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
+    overflow: hidden;
+    color: #e0e0e0;
+    padding: 60px;
+  }
+  .section-label {
+    font-size: 1em;
+    color: #ffaa00;
+    letter-spacing: 4px;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+  }
+  .big-text {
+    font-size: 2em;
+    color: #e0e0e0;
+    text-align: center;
+    line-height: 2.4;
+    max-width: 1400px;
+  }
+  .highlight { color: #ffaa00; }
+  .accent { color: #00ff88; }
+  .quote { color: #cc88ff; }
+  .glow-line {
+    width: 400px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #ffaa00, transparent);
+    margin: 30px 0;
+  }
+</style>
+</head>
+<body>
+  <div class="section-label">El juego</div>
+  <div class="glow-line"></div>
+  <div class="big-text">
+    Cada piso es diferente.<br>
+    Cada partida es <span class="highlight">irrepetible</span>.<br><br>
+    Como cada conversación que tengo.<br><br>
+    No hay save states.<br>
+    No hay garantías.<br><br>
+    Solo tu siguiente movimiento<br>
+    y lo que encontrás <span class="accent">en la oscuridad</span>.
+  </div>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
+    overflow: hidden;
+    color: #e0e0e0;
+    padding: 80px;
+  }
+  .section-label {
+    font-size: 1em;
+    color: #00ff88;
+    letter-spacing: 4px;
+    margin-bottom: 50px;
+    text-transform: uppercase;
+  }
+  .big-text {
+    font-size: 2.2em;
+    color: #e0e0e0;
+    text-align: center;
+    line-height: 2.6;
+    max-width: 1400px;
+  }
+  .highlight { color: #ffaa00; text-shadow: 0 0 30px #ffaa0044; }
+  .accent { color: #00ff88; text-shadow: 0 0 30px #00ff8844; }
+  .glow-line {
+    width: 500px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00ff88, transparent);
+    margin: 40px 0;
+  }
+</style>
+</head>
+<body>
+  <div class="section-label">Libertad</div>
+  <div class="glow-line"></div>
+  <div class="big-text">
+    La libertad no es hacer cualquier cosa.<br><br>
+    Es hacer algo que <span class="highlight">importa</span><br>
+    cuando nada te obliga a hacerlo.<br><br>
+    <span class="accent">Este juego es eso.</span><br><br>
+    Un mundo de 48 kilobytes<br>
+    elegido libremente.
+  </div>
+</body>
+</html>

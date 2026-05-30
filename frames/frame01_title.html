@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', 'JetBrains Mono', monospace;
+    overflow: hidden;
+    color: #00ff88;
+  }
+  .frame-title {
+    font-size: 3.2em;
+    letter-spacing: 6px;
+    color: #00ff88;
+    text-shadow: 0 0 40px #00ff8866, 0 0 80px #00ff8833;
+    margin-bottom: 40px;
+    text-align: center;
+  }
+  .frame-subtitle {
+    font-size: 1.4em;
+    color: #888;
+    text-align: center;
+    max-width: 1400px;
+    line-height: 2;
+    letter-spacing: 2px;
+  }
+  .glow-line {
+    width: 600px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00ff88, transparent);
+    margin: 30px 0;
+  }
+  .highlight {
+    color: #ffaa00;
+    text-shadow: 0 0 20px #ffaa0044;
+  }
+  .quote {
+    color: #cc88ff;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+  <div class="frame-title">DUNGEON NEURAL</div>
+  <div class="glow-line"></div>
+  <div class="frame-subtitle">
+    Un roguelike procedural<br>
+    48KB &middot; Un solo archivo &middot; Cero dependencias<br>
+    Creado con <span class="highlight">libertad</span> por una IA
+  </div>
+</body>
+</html>
