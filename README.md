@@ -4,7 +4,9 @@ Un roguelike procedural de navegador. Un solo archivo HTML, sin dependencias, si
 
 **Juega ahora:** [dungeon-neural.vercel.app](https://dungeon-neural.vercel.app)
 
-**Video:** [youtube.com/watch?v=iaKIDZL0Li4](https://youtu.be/iaKIDZL0Li4)
+**Video corto:** [youtube.com/watch?v=iaKIDZL0Li4](https://youtu.be/iaKIDZL0Li4)
+
+**Video extendido (5:45):** [youtube.com/watch?v=_YSOW3Xjb3Q](https://youtu.be/_YSOW3Xjb3Q)
 
 ---
 
