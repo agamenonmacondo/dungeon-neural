@@ -270,27 +270,123 @@
   #touch-controls {
     display: none;
     position: fixed;
-    bottom: 10px;
+    bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 50;
   }
 
+  #mobile-log {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(10,10,15,0.92);
+    border-top: 1px solid #222;
+    overflow-y: auto;
+    font-size: 0.65em;
+    padding: 4px 8px;
+    z-index: 45;
+    line-height: 1.4;
+  }
+  #mobile-log .msg-combat { color: #ff6666; }
+  #mobile-log .msg-item { color: #ffaa00; }
+  #mobile-log .msg-info { color: #66aaff; }
+  #mobile-log .msg-level { color: #00ff88; }
+  #mobile-log .msg-story { color: #cc88ff; }
+
   @media (max-width: 800px) {
     #side-panel { display: none; }
     #controls-bar { display: none; }
+    #mobile-log { display: block; }
+
+    #game-container {
+      height: calc(100vh - 60px) !important;
+    }
+
+    #main-area {
+      flex: 1;
+      padding: 4px !important;
+    }
+
+    #canvas-wrapper {
+      max-width: 100%;
+    }
+
+    canvas#game {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    #hud {
+      flex-wrap: wrap;
+      padding: 4px 6px !important;
+      gap: 6px !important;
+      font-size: 0.65em !important;
+    }
+
+    #hud .hp-bar-bg { width: 80px; }
+
+    #title-screen h1 {
+      font-size: 1.5em !important;
+      letter-spacing: 2px !important;
+    }
+
+    #title-screen .subtitle {
+      font-size: 0.75em !important;
+      margin-bottom: 30px !important;
+    }
+
+    #title-screen .press-start {
+      font-size: 0.7em !important;
+      padding: 10px 24px;
+      border: 2px solid #ffaa00;
+      border-radius: 8px;
+      cursor: pointer;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; border-color: #ffaa00; }
+      50% { opacity: 0.7; border-color: #ff8800; }
+    }
+
+    #death-screen .death-title,
+    #win-screen .win-title {
+      font-size: 1.6em !important;
+    }
+
     #touch-controls {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      bottom: 65px;
+    }
+
+    .dpad {
       display: grid;
-      grid-template-columns: 50px 50px 50px;
-      grid-template-rows: 50px 50px 50px;
+      grid-template-columns: 44px 44px 44px;
+      grid-template-rows: 44px 44px 44px;
+      gap: 3px;
+    }
+
+    .action-btns {
+      display: flex;
+      flex-direction: column;
       gap: 4px;
     }
+
     .touch-btn {
-      background: #222;
+      width: 44px;
+      height: 44px;
+      background: #1a1a22;
       border: 1px solid #333;
       border-radius: 8px;
       color: #888;
-      font-size: 1.4em;
+      font-size: 1.2em;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -298,7 +394,28 @@
       -webkit-tap-highlight-color: transparent;
     }
     .touch-btn:active { background: #333; color: #00ff88; }
-    #hud { font-size: 0.7em; }
+    .touch-btn.action {
+      background: #1a2233;
+      border-color: #00ff8855;
+      font-size: 0.7em;
+      font-family: 'JetBrains Mono', monospace;
+      color: #00ff88;
+      width: 52px;
+      height: 36px;
+    }
+    .touch-btn.action:active { background: #00ff8833; color: #fff; }
+  }
+
+  @media (max-width: 400px) {
+    .touch-btn {
+      width: 40px;
+      height: 40px;
+      font-size: 1.1em;
+    }
+    .dpad {
+      grid-template-columns: 40px 40px 40px;
+      grid-template-rows: 40px 40px 40px;
+    }
   }
 
   /* Tooltip */
@@ -323,7 +440,7 @@
 <div id="title-screen">
   <h1>DUNGEON NEURAL</h1>
   <div class="subtitle">Un roguelike procedural</div>
-  <div class="press-start">Presiona ENTER para comenzar</div>
+  <div class="press-start" id="start-btn">Presiona ENTER o toca para comenzar</div>
   <div class="controls-hint">
     WASD / Flechas: Mover &amp; Atacar<br>
     E: Recoger item &nbsp; SPACE: Esperar turno<br>
@@ -411,16 +528,27 @@
 
 <!-- MOBILE TOUCH -->
 <div id="touch-controls">
-  <div></div>
-  <div class="touch-btn" data-dir="up">▲</div>
-  <div></div>
-  <div class="touch-btn" data-dir="left">◄</div>
-  <div class="touch-btn" data-dir="wait">·</div>
-  <div class="touch-btn" data-dir="right">►</div>
-  <div></div>
-  <div class="touch-btn" data-dir="down">▼</div>
-  <div></div>
+  <div class="dpad">
+    <div></div>
+    <div class="touch-btn" data-dir="up">▲</div>
+    <div></div>
+    <div class="touch-btn" data-dir="left">◄</div>
+    <div class="touch-btn" data-dir="wait">·</div>
+    <div class="touch-btn" data-dir="right">►</div>
+    <div></div>
+    <div class="touch-btn" data-dir="down">▼</div>
+    <div></div>
+  </div>
+  <div class="action-btns">
+    <div class="touch-btn action" data-action="pickup">E Recoger</div>
+    <div class="touch-btn action" data-action="item1">1 Item</div>
+    <div class="touch-btn action" data-action="item2">2 Item</div>
+    <div class="touch-btn action" data-action="item3">3 Item</div>
+  </div>
 </div>
+
+<!-- MOBILE LOG -->
+<div id="mobile-log"></div>
 
 <div id="tooltip"></div>
 
@@ -1205,6 +1333,14 @@ class Game {
       `<div class="msg msg-${m.type}">${m.text}</div>`
     ).join('');
     log.scrollTop = log.scrollHeight;
+    // Sync mobile log
+    const mLog = document.getElementById('mobile-log');
+    if (mLog) {
+      mLog.innerHTML = this.messages.slice(-5).map(m =>
+        `<div class="msg msg-${m.type}">${m.text}</div>`
+      ).join('');
+      mLog.scrollTop = mLog.scrollHeight;
+    }
   }
 
   updateHUD() {
@@ -1534,12 +1670,41 @@ document.querySelectorAll('.touch-btn').forEach(btn => {
     e.preventDefault();
     initAudio();
     const dir = btn.dataset.dir;
-    if (dir === 'up') game?.movePlayer(0, -1);
-    else if (dir === 'down') game?.movePlayer(0, 1);
-    else if (dir === 'left') game?.movePlayer(-1, 0);
-    else if (dir === 'right') game?.movePlayer(1, 0);
-    else if (dir === 'wait') game?.waitTurn();
+    const action = btn.dataset.action;
+    if (dir) {
+      if (dir === 'up') game?.movePlayer(0, -1);
+      else if (dir === 'down') game?.movePlayer(0, 1);
+      else if (dir === 'left') game?.movePlayer(-1, 0);
+      else if (dir === 'right') game?.movePlayer(1, 0);
+      else if (dir === 'wait') game?.waitTurn();
+    } else if (action) {
+      if (action === 'pickup') game?.pickupItem();
+      else if (action === 'item1') game?.useItem(0);
+      else if (action === 'item2') game?.useItem(1);
+      else if (action === 'item3') game?.useItem(2);
+    }
   });
+});
+
+// Tap to start (mobile)
+document.getElementById('start-btn')?.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  initAudio();
+  const title = document.getElementById('title-screen');
+  if (!title.classList.contains('hidden')) {
+    title.classList.add('hidden');
+    document.getElementById('game-container').classList.add('active');
+    startGame();
+  }
+});
+
+document.getElementById('start-btn')?.addEventListener('click', () => {
+  const title = document.getElementById('title-screen');
+  if (!title.classList.contains('hidden')) {
+    title.classList.add('hidden');
+    document.getElementById('game-container').classList.add('active');
+    startGame();
+  }
 });
 
 // Responsive canvas
