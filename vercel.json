@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/dungeon-neural.html" }
+  ],
+  "cleanUrls": true
+}
